@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horario Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0A0C12;
+    --bg-mid:#0F1420;
+    --border:rgba(255,255,255,0.11);
+    --text:#ECEDF3;
+    --text-dim:#8D93A8;
+    --text-faint:#5B6076;
+    --accent:#8B6BFF;
+    --accent2:#31E0C8;
+    --warn:#FFB454;
+    --radius:18px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    background:var(--bg-deep);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+  }
+
+  .backdrop{
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 900px 700px at 12% 6%, rgba(139,107,255,0.16), transparent 60%),
+      radial-gradient(ellipse 800px 600px at 92% 20%, rgba(49,224,200,0.10), transparent 60%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg-mid) 45%, var(--bg-deep));
+  }
+  .backdrop::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size:42px 42px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 8%, black 30%, transparent 85%);
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:500;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 22px; height:46px;
+    background:rgba(10,12,18,0.6);
+    backdrop-filter:blur(18px);
+    border-bottom:1px solid var(--border);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:0.82rem;
+  }
+  .topbar .brand{ display:flex; align-items:center; gap:8px; color:var(--text-dim); font-weight:600; }
+  .topbar .brand span.dot{ width:7px; height:7px; border-radius:50%; background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
+  .topbar .clock{ font-family:'JetBrains Mono', monospace; color:var(--text); letter-spacing:0.03em; display:flex; gap:14px; align-items:center; }
+  .topbar .clock .date{ color:var(--text-dim); text-transform:capitalize; font-family:'Inter', sans-serif; font-size:0.8rem; }
+
+  main{
+    position:relative; z-index:1;
+    max-width:1180px; margin:0 auto;
+    padding:26px 24px 60px;
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:22px;
+    align-items:start;
+  }
+
+  .card{
+    background:rgba(16,19,30,0.68);
+    backdrop-filter:blur(24px) saturate(140%);
+    -webkit-backdrop-filter:blur(24px) saturate(140%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 30px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--accent2); letter-spacing:0.08em; margin:0 0 8px; }
+
+  /* ---------------- COLUMNA PRINCIPAL: HORARIO ---------------- */
+  .schedule-card{ padding:28px 30px 32px; }
+
+  .sch-head{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:22px; flex-wrap:wrap;
+  }
+  .sch-head h1{ font-family:'Space Grotesk', sans-serif; font-size:2rem; margin:0 0 4px; font-weight:700; }
+  .sch-head p{ margin:0; color:var(--text-dim); font-size:0.92rem; }
+  .print-btn{
+    font-family:'Inter', sans-serif; font-size:0.82rem; font-weight:600; color:var(--text);
+    background:rgba(255,255,255,0.06); border:1px solid var(--border); padding:9px 16px; border-radius:9px; cursor:pointer;
+  }
+  .print-btn:hover{ background:rgba(255,255,255,0.12); }
+
+  .table-scroll{ overflow-x:auto; }
+  table.schedule{ border-collapse:collapse; width:100%; min-width:640px; }
+  table.schedule th, table.schedule td{ border-bottom:1px solid rgba(255,255,255,0.08); padding:0; }
+  table.schedule thead th{ font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:0.92rem; padding:16px 14px; text-align:center; color:var(--text); }
+  table.schedule thead th:first-child, table.schedule thead th:nth-child(2){ color:var(--text-dim); font-weight:500; }
+  td.num-cell{ font-family:'JetBrains Mono', monospace; font-size:0.8rem; color:var(--text-faint); padding:16px 10px; text-align:right; width:1%; }
+  td.time-cell{ font-family:'JetBrains Mono', monospace; font-size:0.82rem; color:var(--text-dim); white-space:nowrap; padding:16px 14px; }
+  td.subject-cell{ padding:18px 14px; min-width:120px; min-height: 200px; font-size:0.96rem; vertical-align:middle; text-align:center; font-weight:600; }
+  tr.break-row td{ color:#9DD9FF; font-style:normal; background:rgba(92,180,255,0.16); }
+  tr.break-row .subject-cell{ text-align:center; font-size:0.88rem; }
+  tbody tr:hover td{ background:rgba(255,255,255,0.04); }
+  th.today-col, td.today-col{ background:rgba(49,224,200,0.08); }
+  tr.current-row td.today-col{ background:rgba(49,224,200,0.18); box-shadow:inset 3px 0 0 var(--accent2); }
+
+  .notes-block{ margin-top:28px; }
+  .notes-block h3{ font-family:'Space Grotesk', sans-serif; font-size:1.05rem; margin:0 0 8px; font-weight:600; }
+  .notes-area{ min-height:70px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px; font-size:0.9rem; line-height:1.8; }
+  .notes-area:empty::before{ content:"Deberes, materiales, recordatorios…"; color:var(--text-faint); }
+
+  /* ---------------- SIDEBAR ---------------- */
+  .sidebar{ display:flex; flex-direction:column; gap:18px; position:sticky; top:70px; }
+
+  .side-card{ padding:20px 20px 22px; }
+
+  .today-day{ font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:700; margin:0 0 2px; text-transform:capitalize; }
+  .today-date{ color:var(--text-dim); font-size:0.82rem; margin:0 0 16px; }
+
+  .now-badge{
+    display:inline-flex; align-items:center; gap:7px;
+    background:rgba(49,224,200,0.12); border:1px solid rgba(49,224,200,0.3);
+    color:var(--accent2); font-family:'JetBrains Mono', monospace; font-size:0.78rem;
+    padding:5px 10px; border-radius:20px; margin-bottom:14px;
+  }
+  .now-badge .pulse{ width:6px; height:6px; border-radius:50%; background:var(--accent2); box-shadow:0 0 6px var(--accent2); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:0.3;} }
+
+  .agenda{ display:flex; flex-direction:column; gap:6px; }
+  .agenda-item{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:9px 10px; border-radius:10px;
+    border:1px solid transparent;
+  }
+  .agenda-item.now{ background:rgba(49,224,200,0.1); border-color:rgba(49,224,200,0.3); }
+  .agenda-item .t{ font-family:'JetBrains Mono', monospace; font-size:0.74rem; color:var(--text-faint); white-space:nowrap; padding-top:2px; }
+  .agenda-item.now .t{ color:var(--accent2); }
+  .agenda-item .s{ font-size:0.88rem; color:var(--text); }
+  .agenda-empty{ color:var(--text-faint); font-size:0.85rem; font-style:italic; }
+
+  .side-divider{ height:1px; background:var(--border); margin:16px 0; }
+
+  .stat-row{ display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-dim); padding:4px 0; }
+  .stat-row b{ color:var(--text); font-family:'JetBrains Mono', monospace; }
+
+  footer{
+    text-align:center; color:var(--text-faint); font-size:0.78rem; padding:0 24px 40px; position:relative; z-index:1;
+  }
+
+  ::-webkit-scrollbar{ width:9px; }
+  ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.15); border-radius:5px; }
+
+  @media (max-width:900px){
+    main{ grid-template-columns:1fr; }
+    .sidebar{ position:static; }
+  }
+  @media (max-width:640px){
+    .schedule-card{ padding:22px 18px 26px; }
+    .sch-head h1{ font-size:1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span>Horario Escolar</div>
+  <div class="clock"><span class="date" id="topDate"></span><span id="topTime">00:00</span></div>
+</div>
+
+<main>
+
+  <!-- ===================== HORARIO ===================== -->
+  <div class="card schedule-card">
+    <div class="sch-head">
+      <div>
+        <br>
+        <br>
+        <p class="eyebrow">Curso 2026–2027</p>
+        <h1>Horario</h1>
+        <p>2º SMR</p>
+      </div>
+      
+    </div>
+    <br>
+    <div class="table-scroll">
+      <table class="schedule" id="scheduleTable">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Hora</th>
+            <th>Lunes</th>
+            <th>Martes</th>
+            <th>Miércoles</th>
+            <th>Jueves</th>
+            <th>Viernes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">08:30–09:30</td>
+            <td class="subject-cell day-cell" data-day="lunes" data-time="08:30–10:30" rowspan="2">SERRE</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="08:30–09:30">IPE II</td>
+            <td class="subject-cell day-cell" data-day="miércoles" data-time="08:30–09:30">SERRE</td>
+            <td class="subject-cell day-cell" data-day="jueves" data-time="08:30–10:30" rowspan="2">SIOPR</td>
+            <td class="subject-cell day-cell" data-day="viernes" data-time="08:30–09:30">SERRE</td>
+          </tr>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">09:30–10:30</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="09:30–10:30">SINF</td>
+            <td class="subject-cell day-cell" data-day="miércoles" data-time="09:30–10:30">INGPRO</td>
+            <td class="subject-cell day-cell" data-day="viernes" data-time="09:30–11:30" rowspan="2">SIOPR</td>
+          </tr>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">10:30–11:30</td>
+            <td class="subject-cell day-cell" data-day="lunes" data-time="10:30–11:30">SINF</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="10:30–11:30">APLWE</td>
+            <td class="subject-cell day-cell" data-day="miércoles" data-time="10:30–11:30">APLWE</td>
+            <td class="subject-cell day-cell" data-day="jueves" data-time="10:30–11:30">SERRE</td>
+          </tr>
+          <tr class="break-row">
+            <td class="num-cell"></td>
+            <td class="time-cell">11:30–12:00</td>
+            <td class="subject-cell" colspan="5">recreo</td>
+          </tr>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">12:00–13:00</td>
+            <td class="subject-cell day-cell" data-day="lunes" data-time="12:00–13:00">INGPRO</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="12:00–13:00">APLWE</td>
+            <td class="subject-cell day-cell" data-day="miércoles" data-time="12:00–13:00">APLWE</td>
+            <td class="subject-cell day-cell" data-day="jueves" data-time="12:00–13:00">IPE II</td>
+            <td class="subject-cell day-cell" data-day="viernes" data-time="12:00–13:00">APLWE</td>
+          </tr>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">13:00–14:00</td>
+            <td class="subject-cell day-cell" data-day="lunes" data-time="13:00–14:00">APLWE</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="13:00–14:00">SERRE</td>
+            <td class="subject-cell day-cell" data-day="miércoles" data-time="13:00–15:00" rowspan="2">PI</td>
+            <td class="subject-cell day-cell" data-day="jueves" data-time="13:00–14:00">SINF</td>
+            <td class="subject-cell day-cell" data-day="viernes" data-time="13:00–14:00">SINF</td>
+          </tr>
+          <tr>
+            <td class="num-cell"></td>
+            <td class="time-cell">14:00–15:00</td>
+            <td class="subject-cell day-cell" data-day="lunes" data-time="14:00–15:00">SIOPR</td>
+            <td class="subject-cell day-cell" data-day="martes" data-time="14:00–15:00">SIOPR</td>
+            <td class="subject-cell day-cell" data-day="jueves" data-time="14:00–15:00">APLWE</td>
+            <td class="subject-cell day-cell" data-day="viernes" data-time="14:00–15:00">IPE II</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    
+  </div>
+
+  <!-- ===================== SIDEBAR: HOY EN VIVO ===================== -->
+  <aside class="sidebar">
+    <div class="card side-card">
+      <p class="today-day" id="sideDay">—</p>
+      <p class="today-date" id="sideDate">—</p>
+      <div id="nowBadgeWrap"></div>
+      <div class="agenda" id="agendaList"></div>
+    </div>
+
+    <div class="card side-card">
+      <p class="eyebrow" style="margin-bottom:14px;">Resumen semanal</p>
+      <div class="stat-row"><span>Clases esta semana</span><b id="statTotal">0</b></div>
+      <div class="stat-row"><span>Clases hoy</span><b id="statToday">0</b></div>
+      <div class="side-divider"></div>
+      <div class="stat-row"><span>Consejo</span></div>
+      <p style="color:var(--text-dim); font-size:0.82rem; margin:4px 0 0; line-height:1.6;">Estudia</p>
+    </div>
+  </aside>
+
+</main>
+
+<footer></footer>
+
+<script>
+const DAYS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function tick(){
+  const now = new Date();
+  document.getElementById('topTime').textContent = pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('topDate').textContent = now.toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+}
+setInterval(tick, 1000); tick();
+
+/* ---------------- PARSEO DE LA TABLA ---------------- */
+function parseRange(str){
+  const m = str.match(/(\d{1,2}):(\d{2})\s*[–\-a]+\s*(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  return {
+    start: parseInt(m[1])*60 + parseInt(m[2]),
+    end: parseInt(m[3])*60 + parseInt(m[4])
+  };
+}
+
+function refresh(){
+  const now = new Date();
+  const day = now.getDay(); // 0=domingo ... 6=sábado
+  const minutesNow = now.getHours()*60 + now.getMinutes();
+  const isSchoolDay = day>=1 && day<=5;
+  const dayNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const todayName = dayNames[day];
+
+  // Cabecera lateral
+  document.getElementById('sideDay').textContent = DAYS[day];
+  document.getElementById('sideDate').textContent =
+    now.toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+
+  // Limpiar resaltados
+  document.querySelectorAll('.today-col').forEach(el=>el.classList.remove('today-col'));
+  document.querySelectorAll('.current-row').forEach(el=>el.classList.remove('current-row'));
+
+  const headCells = document.querySelectorAll('#scheduleTable thead th');
+  if(isSchoolDay && headCells.length > day+1) headCells[day+1].classList.add('today-col');
+
+  const dayCells = [...document.querySelectorAll('#scheduleTable .day-cell')];
+  const agenda = [];
+  let currentSubject = null;
+
+  // Cada celda del horario representa una clase; las celdas con rowspan
+  // ya llevan en data-time el intervalo completo.
+  const totalWeek = dayCells.length;
+  let totalToday = 0;
+
+  dayCells.forEach(cell=>{
+    const cellDay = cell.dataset.day;
+    const label = cell.textContent.trim();
+    const timeText = cell.dataset.time || '';
+    const range = parseRange(timeText);
+    const isToday = isSchoolDay && cellDay === todayName;
+
+    if(isToday){
+      cell.classList.add('today-col');
+
+      const isNow = range && minutesNow>=range.start && minutesNow<range.end;
+      if(isNow){
+        const row = cell.closest('tr');
+        if(row) row.classList.add('current-row');
+        currentSubject = label;
+      }
+
+      if(label!=='') totalToday++;
+
+      if(label!==''){
+        agenda.push({ time:timeText, label, now:isNow });
+      }
+    }
+  });
+
+  // Agenda del día
+  const agendaEl = document.getElementById('agendaList');
+  agendaEl.innerHTML = '';
+  if(!isSchoolDay){
+    agendaEl.innerHTML = '<div class="agenda-empty">Hoy no hay clase 🎉</div>';
+  } else if(agenda.length===0){
+    agendaEl.innerHTML = '<div class="agenda-empty"></div>';
+  } else {
+    agenda.forEach(item=>{
+      const div = document.createElement('div');
+      div.className = 'agenda-item' + (item.now ? ' now' : '');
+      div.innerHTML = `<span class="t">${item.time}</span><span class="s">${item.label}</span>`;
+      agendaEl.appendChild(div);
+    });
+  }
+
+  // Badge "ahora"
+  const badgeWrap = document.getElementById('nowBadgeWrap');
+  badgeWrap.innerHTML = '';
+  if(isSchoolDay && currentSubject){
+    const b = document.createElement('div');
+    b.className = 'now-badge';
+    b.innerHTML = `<span class="pulse"></span> ahora: ${currentSubject}`;
+    badgeWrap.appendChild(b);
+  }
+
+  document.getElementById('statTotal').textContent = totalWeek;
+  document.getElementById('statToday').textContent = totalToday;
+}
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+
+</body>
+</html>
