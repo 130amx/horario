@@ -69,9 +69,9 @@
     max-width:1180px; margin:0 auto;
     padding:26px 24px 60px;
     display:grid;
-    grid-template-columns:1fr 300px;
+    grid-template-columns:minmax(0, 1fr) 340px;
     gap:22px;
-    align-items:start;
+    align-items:stretch;
   }
 
   .card{
@@ -86,7 +86,8 @@
   .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--accent2); letter-spacing:0.08em; margin:0 0 8px; }
 
   /* ---------------- COLUMNA PRINCIPAL: HORARIO ---------------- */
-  .schedule-card{ padding:28px 30px 32px; }
+  .schedule-card{ padding:110px 38px 40px;
+  margin-left:-30px }
 
   .sch-head{
     display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:22px; flex-wrap:wrap;
@@ -119,9 +120,11 @@
   .notes-area:empty::before{ content:"Deberes, materiales, recordatorios…"; color:var(--text-faint); }
 
   /* ---------------- SIDEBAR ---------------- */
-  .sidebar{ display:flex; flex-direction:column; gap:18px; position:sticky; top:70px; }
+  .sidebar{ display:flex; flex-direction:column; gap:18px; position:sticky; top:70px; align-self:stretch; }
+  .sidebar .side-card:last-child{ margin-top:auto; }
 
-  .side-card{ padding:20px 20px 22px; }
+  .side-card{ padding:100px 26px 50px; min-height:220px;
+  padding-bottom: 50px }
 
   .today-day{ font-family:'Space Grotesk', sans-serif; font-size:1.15rem; font-weight:700; margin:0 0 2px; text-transform:capitalize; }
   .today-date{ color:var(--text-dim); font-size:0.82rem; margin:0 0 16px; }
